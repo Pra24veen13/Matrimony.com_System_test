@@ -1,0 +1,238 @@
+.recorder-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+   max-width: 800px;
+    
+    height: calc(100vh - 112px);
+    margin: 0 auto;
+   }
+   .canva-wrapper{
+    position: relative;
+    width: 100%;
+    padding: 50px 0px;
+   }
+   .timer {
+    font-size: 14px;
+    font-weight: bold;
+    font-family: monospace;
+    color: #333;
+    /* margin-top: 60px; */
+    font-weight: 600;
+  }
+   canvas {
+    width: 100%;
+    max-width: 400px;
+    height: 56px;
+    border-radius: 12px;
+    background: none;
+  
+    z-index: 1;
+   
+   }
+   .recording-wave{
+    width: 250px;
+    
+   }
+.recorder-inside-wrapper{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+   width: 100%;
+}
+   
+   .recording-screen, .playback-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid #ddd;
+    max-width: 300px;
+    padding: 20px;
+    width: 100%;
+    position: relative;
+    height: 200px;
+    border-radius: 10px;
+    justify-content: center;
+ 
+   }
+   .primary-btn {
+    background-color: #f01d2d;
+    cursor: pointer;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    width:46px;
+    height:46px;
+    border-radius: 50px;
+    position: absolute;
+    bottom: 6px;
+    left:6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+   }
+   .primary-btn:disabled {
+    background-color: #f7a8b8;
+    cursor: not-allowed;
+   }
+
+   .button-border{
+    width: 60px;
+    height: 60px;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    position: absolute;
+    bottom: -30px
+   }
+   .next-btn:disabled{
+    background-color: #ccc;
+    border: none;
+    color: #fff;
+    cursor: not-allowed;
+   }
+
+   .next-btn {
+    background-color: #f01d2d;
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    padding: 10px 26px;
+    font-size: 15px;
+    font-weight: 600;
+    width: 180px;
+    margin-top: 50px;
+    cursor: pointer;
+   }
+   .cancel-btn {
+    border: none;
+    background: none;
+    
+   }
+   .cancel-btn i{
+    font-size: 28px;
+    position: absolute;
+    position: absolute;
+    top: 67px;
+    right: 20px;
+   }
+   .recording-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #f26b8c;
+   }
+   .dot {
+    height: 12px;
+    width: 12px;
+    background-color: #f26b8c;
+    border-radius: 50%;
+    animation: pulse 1.2s infinite ease-in-out;
+   }
+   .margin_top_10{
+    margin-top: 15px;
+   }
+   .mike{
+    position: absolute;
+    top:-24px;
+    border: 1px solid #000;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    width: 50px;
+    height: 50px;
+    padding: 10px;
+    justify-content: center;
+   }
+   .sound_check{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+   }
+   @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    50% {
+      transform: scale(1.4);
+      opacity: 0.4;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+   }
+
+
+   .microphone-icon {
+    width: 60px;
+    height: 60px;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    color: #f01d2d; 
+    font-size: 1.5em;
+    position: absolute;
+    top:-30px;
+    background-color: #fff;
+    
+  }
+  .tap-record{
+    padding-top: 25px;
+  }
+
+  .play-pause-btn{
+    background-color: #f01d2d;
+    cursor: pointer;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    width:46px;
+    height:46px;
+    border-radius: 50px;
+    position: absolute;
+    bottom: 6px;
+    left:6px;
+  }
+  .recorded-wave{
+   max-width: 200px;
+  }
+
+
+  .tap-bottom{
+    margin-top: 50px;
+  }
+.recorded-waveform{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 25px;
+}
+  /* @media screen and (max-width: 767px){
+    .recording-wave{
+        left: 34%;
+        top: 21%;
+    }
+  }
+  @media screen and (max-width: 480px){
+    .recording-wave{
+        left: 20%;
+        top: 21%;
+        width: 230px;
+    }
+  } */

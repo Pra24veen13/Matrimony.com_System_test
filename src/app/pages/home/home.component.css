@@ -1,0 +1,22 @@
+.homebanner-container{
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 40px 0px;
+    height: calc(100vh - 112px);
+}
+
+.banner-image-container img{
+    max-width: 450px;
+    width: 100%;
+}
+.heading-container h1{
+    max-width:450px;
+}
+@media (max-width: 768px) {
+    .homebanner-container{
+       flex-direction: column; 
+       padding: 10px 20px;
+       justify-content:center;
+    }   
+}

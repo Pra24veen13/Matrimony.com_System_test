@@ -1,0 +1,66 @@
+<div class="recorder-wrapper">
+  <div class="canva-wrapper">
+    <div *ngIf="mode === 'recording'" class="recorder-inside-wrapper">
+      <div class="recording-screen">
+        <div class="microphone-icon">
+          <i class="fa-solid fa-microphone"></i>
+        </div>
+        <canvas #waveformCanvas class="recording-wave"></canvas>
+        <div class="button-border">
+          <button class="primary-btn" (click)="toggleRecording()" [disabled]="nextEnabled">
+            <ng-container *ngIf="isRecording; else startIcon">
+              <i class="fa-solid fa-stop"></i>
+            </ng-container>
+            <ng-template #startIcon>
+              <i class="fa-solid fa-microphone"></i>
+            </ng-template>
+          </button>
+        </div>
+
+        <div class="recording-indicator">
+          <span class="timer">{{ recordingTimeDisplay }}</span>
+        </div>
+      </div>
+      <div class="recorder-inside-wrapper">
+        <p class="tap-record">Tap to start recording</p>
+        <div>
+          <button class="next-btn" [disabled]="!nextEnabled" (click)="goToPlayback()">
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+    <div *ngIf="mode === 'playback'" class="recorder-inside-wrapper">
+      <div class="recording-screen">
+        <div class="microphone-icon">
+          <i class="fa-solid fa-microphone"></i>
+        </div>
+        <div class="recorded-waveform">
+          <canvas #waveformCanvas class="recorded-wave"></canvas>
+          <button class="cancel-btn" (click)="reset()">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </button>
+        </div>
+        <div class="button-border">
+          <button class="primary-btn" (click)="togglePlayPause()">
+            <ng-container *ngIf="isPlaying; else playIcon">
+              <i class="fa-solid fa-pause"></i>
+            </ng-container>
+            <ng-template #playIcon>
+              <i class="fa-solid fa-play"></i>
+            </ng-template>
+          </button>
+        </div>
+        <span class="timer recorded-timer">{{ playbackTimeDisplay }}</span>
+      </div>
+      <div class="recorder-inside-wrapper">
+        <p class="tap-record">Tap to play</p>
+        <div>
+          <button class="next-btn" (click)="submitRecording()">
+            Submit
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
