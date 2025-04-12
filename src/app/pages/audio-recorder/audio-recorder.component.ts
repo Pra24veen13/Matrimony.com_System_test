@@ -17,6 +17,7 @@ export class AudioRecorderComponent implements AfterViewInit {
   audioUrl: string | null = null;
   recordingTimeDisplay = '0:00 / 0:30';
   playbackTimeDisplay = '0:00 / 0:30';
+
   private mediaRecorder!: MediaRecorder;
   private chunks: Blob[] = [];
   private stream!: MediaStream;
@@ -25,7 +26,7 @@ export class AudioRecorderComponent implements AfterViewInit {
   private dataArray!: Uint8Array;
   private animationId!: number;
   private timeoutId: ReturnType<typeof setInterval> | null = null;
-  private recordingStartTime: number = 0;
+  private recordingStartTime = 0;
   private audioPlayer?: HTMLAudioElement;
 
   @ViewChild('waveformCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
@@ -37,11 +38,7 @@ export class AudioRecorderComponent implements AfterViewInit {
   }
 
   toggleRecording() {
-    if (this.isRecording) {
-      this.stopRecording();
-    } else {
-      this.startRecording();
-    }
+    this.isRecording ? this.stopRecording() : this.startRecording();
   }
 
   startRecording() {
@@ -93,7 +90,6 @@ export class AudioRecorderComponent implements AfterViewInit {
 
       setTimeout(() => {
         this.recordingStartTime = Date.now();
-
         this.timeoutId = setInterval(() => {
           const elapsedSec = Math.floor((Date.now() - this.recordingStartTime) / 1000);
           const minutes = Math.floor(elapsedSec / 60);
@@ -140,50 +136,36 @@ export class AudioRecorderComponent implements AfterViewInit {
 
   togglePlayPause() {
     if (!this.audioPlayer || isNaN(this.audioPlayer.duration)) return;
-  
-    if (!this.audioContext || this.audioContext.state === 'closed') {
-      this.audioContext = new AudioContext();
-      const source = this.audioContext.createMediaElementSource(this.audioPlayer);
-      this.analyser = this.audioContext.createAnalyser();
-      source.connect(this.analyser);
-      this.analyser.connect(this.audioContext.destination);
-      this.analyser.fftSize = 256;
-      this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-    }
-  
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume(); // <-- Required on iOS Safari
-    }
-  
+
     if (this.isPlaying) {
       this.audioPlayer.pause();
       this.isPlaying = false;
       cancelAnimationFrame(this.animationId);
     } else {
-      this.audioPlayer.play().then(() => {
-        this.isPlaying = true;
-  
-        this.audioPlayer!.ontimeupdate = () => {
-          const current = Math.floor(this.audioPlayer!.currentTime);
-          const minutes = Math.floor(current / 60);
-          const seconds = (current % 60).toString().padStart(2, '0');
-          this.playbackTimeDisplay = `${minutes}:${seconds} / 0:30`;
-        };
-  
-        this.audioPlayer!.onended = () => {
-          this.isPlaying = false;
-          this.playbackTimeDisplay = '0:30 / 0:30';
-          cancelAnimationFrame(this.animationId);
-        };
-  
-        this.drawWaveform();
-      }).catch((error) => {
-        console.warn('Playback failed:', error);
-      });
+      // Resume AudioContext for mobile compatibility
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+      }
+
+      this.audioPlayer.play();
+      this.isPlaying = true;
+
+      this.audioPlayer.ontimeupdate = () => {
+        const current = Math.floor(this.audioPlayer!.currentTime);
+        const minutes = Math.floor(current / 60);
+        const seconds = (current % 60).toString().padStart(2, '0');
+        this.playbackTimeDisplay = `${minutes}:${seconds} / 0:30`;
+      };
+
+      this.audioPlayer.onended = () => {
+        this.isPlaying = false;
+        this.playbackTimeDisplay = '0:30 / 0:30';
+        cancelAnimationFrame(this.animationId);
+      };
+
+      this.drawWaveform();
     }
   }
-  
-  
 
   reset() {
     this.audioUrl = null;
@@ -251,15 +233,16 @@ export class AudioRecorderComponent implements AfterViewInit {
     }
     this.isPlaying = false;
   }
+
   submitRecording() {
     if (!this.audioUrl) {
       alert('No recording found!');
       return;
     }
-  
+
     fetch(this.audioUrl)
-      .then(response => response.blob())
-      .then(blob => {
+      .then((response) => response.blob())
+      .then((blob) => {
         const reader = new FileReader();
         reader.onload = () => {
           const base64Audio = reader.result as string;
@@ -267,26 +250,8 @@ export class AudioRecorderComponent implements AfterViewInit {
           alert('Recording successfully stored!');
         };
         reader.readAsDataURL(blob);
-        this.audioUrl = null;
-        this.nextEnabled = false;
-        this.showNextButton = true;
-        this.isRecording = false;
-        this.isPlaying = false;
-        this.recordingTimeDisplay = '0:00 / 0:30';
-        this.playbackTimeDisplay = '0:00 / 0:30';
-    
-        if (this.timeoutId) {
-          clearInterval(this.timeoutId);
-          this.timeoutId = null;
-        }
-    
-        this.resetAudio();
-    
-        const canvas = this.canvasRef.nativeElement;
-        const ctx = canvas.getContext('2d');
-        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-        this.mode = 'recording';
+
+        this.reset();
       })
       .catch(() => alert('Failed to save the recording.'));
   }
