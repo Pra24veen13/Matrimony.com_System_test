@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ElementRef, HostListener } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -11,9 +11,18 @@ import { RouterLink } from '@angular/router';
 })
 export class HeaderComponent {
   menuOpen = false;
+constructor(private _eref: ElementRef){
 
+}
   toggleMenu() {
     this.menuOpen = !this.menuOpen;
+  }
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const clickedInside = this._eref.nativeElement.contains(event.target);
+    if (!clickedInside) {
+      this.closeMenu();
+    }
   }
   
   closeMenu() {

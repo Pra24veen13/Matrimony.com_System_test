@@ -11,12 +11,11 @@ import { Component, CUSTOM_ELEMENTS_SCHEMA, HostListener } from '@angular/core';
 })
 export class ImageCarouselComponent {
  images = [
-    'assets/Images/pic1.jpg',
-  'assets/Images/pic2.jpg',
-  'assets/Images/pic6.jpg', 
-  'assets/Images/pic4.jpg', 
-  'assets/Images/pic5.jpg', 
-  'assets/Images/pic6.jpg'
+  'assets/Images/1.webp',
+  'assets/Images/2.webp',
+  'assets/Images/5.webp',
+  'assets/Images/4.webp',
+  'assets/Images/5.webp',
   ];
   currentIndex = 0;
   startX = 0;

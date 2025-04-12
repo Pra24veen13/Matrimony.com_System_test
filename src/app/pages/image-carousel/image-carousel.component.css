@@ -10,7 +10,9 @@
 .photo-count {
   font-size: 1rem;
   margin-bottom: 12px;
+  font-weight: 500;
 }
+
 
 .carousel-track {
   position: relative;
