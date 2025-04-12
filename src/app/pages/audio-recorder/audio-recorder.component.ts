@@ -141,32 +141,48 @@ export class AudioRecorderComponent implements AfterViewInit {
   togglePlayPause() {
     if (!this.audioPlayer || isNaN(this.audioPlayer.duration)) return;
   
+    if (!this.audioContext || this.audioContext.state === 'closed') {
+      this.audioContext = new AudioContext();
+      const source = this.audioContext.createMediaElementSource(this.audioPlayer);
+      this.analyser = this.audioContext.createAnalyser();
+      source.connect(this.analyser);
+      this.analyser.connect(this.audioContext.destination);
+      this.analyser.fftSize = 256;
+      this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+    }
+  
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume(); // <-- Required on iOS Safari
+    }
+  
     if (this.isPlaying) {
       this.audioPlayer.pause();
       this.isPlaying = false;
       cancelAnimationFrame(this.animationId);
     } else {
-      this.audioPlayer.play();
-      this.isPlaying = true;
+      this.audioPlayer.play().then(() => {
+        this.isPlaying = true;
   
-      this.audioPlayer.ontimeupdate = () => {
-        if (!this.audioPlayer) return;
+        this.audioPlayer!.ontimeupdate = () => {
+          const current = Math.floor(this.audioPlayer!.currentTime);
+          const minutes = Math.floor(current / 60);
+          const seconds = (current % 60).toString().padStart(2, '0');
+          this.playbackTimeDisplay = `${minutes}:${seconds} / 0:30`;
+        };
   
-        const current = Math.floor(this.audioPlayer.currentTime);
-        const minutes = Math.floor(current / 60);
-        const seconds = (current % 60).toString().padStart(2, '0');
-        this.playbackTimeDisplay = `${minutes}:${seconds} / 0:30`;
-      };
+        this.audioPlayer!.onended = () => {
+          this.isPlaying = false;
+          this.playbackTimeDisplay = '0:30 / 0:30';
+          cancelAnimationFrame(this.animationId);
+        };
   
-      this.audioPlayer.onended = () => {
-        this.isPlaying = false;
-        this.playbackTimeDisplay = '0:30 / 0:30';
-        cancelAnimationFrame(this.animationId);
-      };
-  
-      this.drawWaveform(); 
+        this.drawWaveform();
+      }).catch((error) => {
+        console.warn('Playback failed:', error);
+      });
     }
   }
+  
   
 
   reset() {
