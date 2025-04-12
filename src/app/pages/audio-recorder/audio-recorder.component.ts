@@ -21,12 +21,12 @@ export class AudioRecorderComponent implements AfterViewInit {
   private mediaRecorder!: MediaRecorder;
   private chunks: Blob[] = [];
   private stream!: MediaStream;
-  private audioContext!: AudioContext;
+  private audioContext: AudioContext | null = null;
   private analyser!: AnalyserNode;
   private dataArray!: Uint8Array;
   private animationId!: number;
   private timeoutId: ReturnType<typeof setInterval> | null = null;
-  private recordingStartTime: number = 0;
+  private recordingStartTime = 0;
   private audioPlayer: HTMLAudioElement | null = null;
 
   @ViewChild('waveformCanvas') canvasRef!: ElementRef<HTMLCanvasElement>;
@@ -38,10 +38,14 @@ export class AudioRecorderComponent implements AfterViewInit {
   }
 
   toggleRecording() {
-    this.isRecording ? this.stopRecording() : this.startRecording();
+    if (this.isRecording) {
+      this.stopRecording();
+    } else {
+      this.startRecording();
+    }
   }
 
-  startRecording() {
+  async startRecording() {
     if (this.isRecording) return;
 
     this.resetAudio();
@@ -50,60 +54,59 @@ export class AudioRecorderComponent implements AfterViewInit {
     this.recordingTimeDisplay = '0:00 / 0:30';
     this.recordingStartTime = Date.now();
 
-    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-      this.stream = stream;
-      this.audioContext = new AudioContext();
+    this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const source = this.audioContext.createMediaStreamSource(this.stream);
 
-      const source = this.audioContext.createMediaStreamSource(stream);
-      this.analyser = this.audioContext.createAnalyser();
-      source.connect(this.analyser);
-      this.analyser.fftSize = 256;
-      const bufferLength = this.analyser.frequencyBinCount;
-      this.dataArray = new Uint8Array(bufferLength);
+    this.analyser = this.audioContext.createAnalyser();
+    source.connect(this.analyser);
+    this.analyser.fftSize = 256;
+    const bufferLength = this.analyser.frequencyBinCount;
+    this.dataArray = new Uint8Array(bufferLength);
 
-      this.drawWaveform();
+    this.drawWaveform();
 
-      this.mediaRecorder = new MediaRecorder(stream);
-      this.chunks = [];
+    this.mediaRecorder = new MediaRecorder(this.stream);
+    this.chunks = [];
 
-      this.mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          this.chunks.push(e.data);
-        }
+    this.mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        this.chunks.push(e.data);
+      }
+    };
+
+    this.mediaRecorder.onstop = () => {
+      cancelAnimationFrame(this.animationId);
+      const blob = new Blob(this.chunks, { type: 'audio/webm' });
+      this.audioUrl = URL.createObjectURL(blob);
+      this.audioPlayer = new Audio(this.audioUrl);
+      this.audioPlayer.preload = 'auto';
+
+      this.audioPlayer.onended = () => {
+        this.isPlaying = false;
+        this.playbackTimeDisplay = '0:30 / 0:30';
       };
 
-      this.mediaRecorder.onstop = () => {
-        cancelAnimationFrame(this.animationId);
-        const blob = new Blob(this.chunks, { type: 'audio/webm' });
-        this.audioUrl = URL.createObjectURL(blob);
-        this.audioPlayer = new Audio(this.audioUrl);
+      this.cleanupStream();
+    };
 
-        this.audioPlayer.onended = () => {
-          this.isPlaying = false;
-          this.playbackTimeDisplay = '0:30 / 0:30';
-        };
+    this.mediaRecorder.start();
 
-        this.cleanupStream();
-      };
+    this.timeoutId = setInterval(() => {
+      const elapsedSec = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+      const minutes = Math.floor(elapsedSec / 60);
+      const seconds = (elapsedSec % 60).toString().padStart(2, '0');
+      this.recordingTimeDisplay = `${minutes}:${seconds} / 0:30`;
 
-      this.mediaRecorder.start();
-
-      this.timeoutId = setInterval(() => {
-        const elapsedSec = Math.floor((Date.now() - this.recordingStartTime) / 1000);
-        const minutes = Math.floor(elapsedSec / 60);
-        const seconds = (elapsedSec % 60).toString().padStart(2, '0');
-        this.recordingTimeDisplay = `${minutes}:${seconds} / 0:30`;
-
-        if (elapsedSec >= 30) {
-          this.stopRecording();
-          this.nextEnabled = true;
-        }
-      }, 200);
-    });
+      if (elapsedSec >= 30) {
+        this.stopRecording();
+        this.nextEnabled = true;
+      }
+    }, 200);
   }
 
   stopRecording() {
-    if (!this.isRecording || !this.mediaRecorder) return;
+    if (!this.isRecording) return;
 
     this.mediaRecorder.stop();
     this.isRecording = false;
@@ -117,30 +120,41 @@ export class AudioRecorderComponent implements AfterViewInit {
   }
 
   goToPlayback() {
-    if (!this.audioUrl || !this.audioPlayer) return;
+    if (!this.audioUrl) return;
 
     this.mode = 'playback';
     this.isPlaying = false;
 
-    this.audioContext = new AudioContext();
-    if (this.audioContext.state === 'suspended') {
+    // Resume audio context if it's suspended (required on iOS)
+    if (this.audioContext?.state === 'suspended') {
       this.audioContext.resume();
     }
 
-    const source = this.audioContext.createMediaElementSource(this.audioPlayer);
-    this.analyser = this.audioContext.createAnalyser();
-    source.connect(this.analyser);
-    this.analyser.connect(this.audioContext.destination);
-    this.analyser.fftSize = 256;
-    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-    this.drawWaveform();
+    if (this.audioContext) {
+      const source = this.audioContext.createMediaElementSource(this.audioPlayer!);
+      this.analyser = this.audioContext.createAnalyser();
+      source.connect(this.analyser);
+      this.analyser.connect(this.audioContext.destination);
+      this.analyser.fftSize = 256;
+      this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+      this.drawWaveform();
+    }
   }
 
   togglePlayPause() {
-    if (!this.audioPlayer || isNaN(this.audioPlayer.duration)) return;
+    if (!this.audioPlayer) return;
 
-    const playAudio = () => {
-      this.audioPlayer!.play().then(() => {
+    // Resume audio context before playing (important for iOS Safari)
+    if (this.audioContext?.state === 'suspended') {
+      this.audioContext.resume();
+    }
+
+    if (this.isPlaying) {
+      this.audioPlayer.pause();
+      this.isPlaying = false;
+      cancelAnimationFrame(this.animationId);
+    } else {
+      this.audioPlayer.play().then(() => {
         this.isPlaying = true;
 
         this.audioPlayer!.ontimeupdate = () => {
@@ -157,24 +171,11 @@ export class AudioRecorderComponent implements AfterViewInit {
         };
 
         this.drawWaveform();
-      }).catch((err) => {
-        console.warn('Audio play failed (iOS may block):', err);
+      }).catch((error) => {
+        console.warn('Playback failed on iOS:', error);
+        alert('Playback failed. Tap again to retry.');
       });
-    };
-
-    if (this.audioContext && this.audioContext.state === 'suspended') {
-      this.audioContext.resume().then(playAudio);
-    } else {
-      this.isPlaying ? this.pauseAudio() : playAudio();
     }
-  }
-
-  pauseAudio() {
-    if (this.audioPlayer) {
-      this.audioPlayer.pause();
-    }
-    this.isPlaying = false;
-    cancelAnimationFrame(this.animationId);
   }
 
   reset() {
@@ -200,6 +201,28 @@ export class AudioRecorderComponent implements AfterViewInit {
     this.mode = 'recording';
   }
 
+  submitRecording() {
+    if (!this.audioUrl) {
+      alert('No recording found!');
+      return;
+    }
+
+    fetch(this.audioUrl)
+      .then(response => response.blob())
+      .then(blob => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64Audio = reader.result as string;
+          localStorage.setItem('recordedAudio', base64Audio);
+          alert('Recording saved!');
+        };
+        reader.readAsDataURL(blob);
+
+        this.reset();
+      })
+      .catch(() => alert('Failed to save the recording.'));
+  }
+
   private drawWaveform() {
     const canvas = this.canvasRef.nativeElement;
     const ctx = canvas.getContext('2d');
@@ -213,6 +236,7 @@ export class AudioRecorderComponent implements AfterViewInit {
       ctx.lineWidth = 2;
       ctx.strokeStyle = '#f26b8c';
       ctx.beginPath();
+
       const sliceWidth = canvas.width / this.dataArray.length;
       let x = 0;
 
@@ -235,36 +259,16 @@ export class AudioRecorderComponent implements AfterViewInit {
         this.audioPlayer.pause();
         this.audioPlayer.currentTime = 0;
       } catch (e) {
-        console.warn('Audio reset error:', e);
+        console.warn('Error resetting audio player:', e);
       }
+      this.audioPlayer = null;
     }
-    this.audioPlayer = null;
     this.isPlaying = false;
-  }
-
-  submitRecording() {
-    if (!this.audioUrl) {
-      alert('No recording found!');
-      return;
-    }
-
-    fetch(this.audioUrl)
-      .then((response) => response.blob())
-      .then((blob) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64Audio = reader.result as string;
-          localStorage.setItem('recordedAudio', base64Audio);
-          alert('Recording successfully stored!');
-        };
-        reader.readAsDataURL(blob);
-        this.reset();
-      })
-      .catch(() => alert('Failed to save the recording.'));
   }
 
   private cleanupStream() {
     this.stream?.getTracks().forEach((track) => track.stop());
     this.audioContext?.close();
+    this.audioContext = null;
   }
 }
