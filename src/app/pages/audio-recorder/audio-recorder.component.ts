@@ -81,10 +81,10 @@ export class AudioRecorderComponent implements AfterViewInit {
         this.audioUrl = URL.createObjectURL(blob);
         this.audioPlayer = new Audio(this.audioUrl);
 
-        this.audioPlayer.addEventListener('ended', () => {
+        this.audioPlayer.onended = () => {
           this.isPlaying = false;
           this.playbackTimeDisplay = '0:30 / 0:30';
-        });
+        };
 
         this.cleanupStream();
       };
@@ -140,43 +140,34 @@ export class AudioRecorderComponent implements AfterViewInit {
 
   togglePlayPause() {
     if (!this.audioPlayer || isNaN(this.audioPlayer.duration)) return;
-
+  
     if (this.isPlaying) {
       this.audioPlayer.pause();
       this.isPlaying = false;
       cancelAnimationFrame(this.animationId);
     } else {
-      const playPromise = this.audioPlayer.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          this.isPlaying = true;
-          this.audioPlayer!.addEventListener('timeupdate', this.updatePlaybackTime);
-          this.audioPlayer!.addEventListener('ended', this.playbackEnded);
-          this.drawWaveform();
-        }).catch(error => {
-          console.error("Playback failed:", error);
-        });
-      }
+      this.audioPlayer.play();
+      this.isPlaying = true;
+  
+      this.audioPlayer.ontimeupdate = () => {
+        if (!this.audioPlayer) return;
+  
+        const current = Math.floor(this.audioPlayer.currentTime);
+        const minutes = Math.floor(current / 60);
+        const seconds = (current % 60).toString().padStart(2, '0');
+        this.playbackTimeDisplay = `${minutes}:${seconds} / 0:30`;
+      };
+  
+      this.audioPlayer.onended = () => {
+        this.isPlaying = false;
+        this.playbackTimeDisplay = '0:30 / 0:30';
+        cancelAnimationFrame(this.animationId);
+      };
+  
+      this.drawWaveform(); 
     }
   }
-
-  private updatePlaybackTime = () => {
-    if (!this.audioPlayer) return;
-    const current = Math.floor(this.audioPlayer.currentTime);
-    const minutes = Math.floor(current / 60);
-    const seconds = (current % 60).toString().padStart(2, '0');
-    this.playbackTimeDisplay = `${minutes}:${seconds} / 0:30`;
-  };
-
-  private playbackEnded = () => {
-    this.isPlaying = false;
-    this.playbackTimeDisplay = '0:30 / 0:30';
-    cancelAnimationFrame(this.animationId);
-    if(this.audioPlayer) {
-      this.audioPlayer.removeEventListener('timeupdate', this.updatePlaybackTime);
-      this.audioPlayer.removeEventListener('ended', this.playbackEnded);
-    }
-  };
+  
 
   reset() {
     this.audioUrl = null;
@@ -244,13 +235,12 @@ export class AudioRecorderComponent implements AfterViewInit {
     }
     this.isPlaying = false;
   }
-
   submitRecording() {
     if (!this.audioUrl) {
       alert('No recording found!');
       return;
     }
-
+  
     fetch(this.audioUrl)
       .then(response => response.blob())
       .then(blob => {
@@ -261,7 +251,26 @@ export class AudioRecorderComponent implements AfterViewInit {
           alert('Recording successfully stored!');
         };
         reader.readAsDataURL(blob);
-        this.reset();
+        this.audioUrl = null;
+        this.nextEnabled = false;
+        this.showNextButton = true;
+        this.isRecording = false;
+        this.isPlaying = false;
+        this.recordingTimeDisplay = '0:00 / 0:30';
+        this.playbackTimeDisplay = '0:00 / 0:30';
+    
+        if (this.timeoutId) {
+          clearInterval(this.timeoutId);
+          this.timeoutId = null;
+        }
+    
+        this.resetAudio();
+    
+        const canvas = this.canvasRef.nativeElement;
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+        this.mode = 'recording';
       })
       .catch(() => alert('Failed to save the recording.'));
   }
