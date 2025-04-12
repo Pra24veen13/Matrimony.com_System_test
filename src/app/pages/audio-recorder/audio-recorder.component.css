@@ -189,6 +189,10 @@
     background-color: #fff;
     
   }
+  .microphone-icon img{
+    width: 30px;
+    color: #f01d2d; 
+  }
   .tap-record{
     padding-top: 25px;
   }
